@@ -42,13 +42,13 @@ qiniu==7.3.1
 queuelib==1.7.0
 feedparser==6.0.11
 requests
-Scrapy==2.11.2
+Scrapy==2.9.0
 secure-cookie==0.2.0
 service-identity==24.1.0
 six==1.16.0
 SQLAlchemy==2.0.31
 starlette==0.37.2
-Twisted==24.3.0
+Twisted==22.10.0
 typing-extensions==4.12.2
 urllib3==2.2.2
 uvicorn==0.30.1
