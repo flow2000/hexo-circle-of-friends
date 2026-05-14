@@ -15,9 +15,9 @@
 #   - stellar：stellar主题
 # 支持配置多个友链页面并指定不同主题策略，每个用{}分隔，它们会被同时爬取，数据保存在一起。
 LINK: [
-     { link: "https://www.yyyzyyyz.cn/link/", theme: "butterfly" },  # 友链页地址1，修改为你的友链页地址
+     { link: "https://blog.june-pj.cn/link/", theme: "butterfly" },  # 友链页地址1，修改为你的友链页地址
 #     { link: "https://noionion.top/link/", theme: "butterfly" }, # 友链页地址2
-    # { link: "https://immmmm.com/about/", theme: "common1" }, # 友链页地址3
+#     { link: "https://immmmm.com/about/", theme: "common1" }, # 友链页地址3
 #     ...
 ]
 
@@ -30,17 +30,10 @@ LINK: [
 #       avatar：必填，头像地址
 #       suffix：选填，自定义订阅后缀，主要针对不规范的网站订阅后缀，见示例2
 SETTINGS_FRIENDS_LINKS: {
-    enable: false,
+    enable: true,
     json_api_or_path: "",
     list: [
-        # 示例1：
-        # ["贰猹の小窝", "https://noionion.top/", "https://pub-noionion.oss-cn-hangzhou.aliyuncs.com/head.jpg"],
-        # ["Akilarの糖果屋", "https://akilar.top/", "https://akilar.top/images/headimage.png"],
-        # 示例2：使用suffix的配置如下
-        # 程序目前自动获取 "atom.xml", "feed/atom", "rss.xml", "rss2.xml", "feed", "index.xml" 这些后缀
-        # 如果目标地址的后缀不在其中，就可以在这里添加
-        # 比如 https://elizen.me/hello.xml ，填写：
-        # ["elizen", "https://elizen.me/", "https://akilar.top/images/headimage.png", "hello.xml"]
+        ["June's Blog", "https://blog.june-pj.cn/", "https://img.june-pj.cn/img/avatar.webp"]
     ]
 }
 
@@ -66,7 +59,7 @@ MAX_POSTS_NUM:  5
 # 名称为PROXY，值为[IP]:[端口]或代理地址，比如：192.168.1.106:8080
 
 # 过期文章清除（天）
-OUTDATE_CLEAN: 60
+OUTDATE_CLEAN: 360
 
 # 定时任务，每天0点、6点、12点、18点、21点执行一次
 CRON: "0 0,6,12,18,21 * * *"
@@ -76,7 +69,7 @@ SIMPLE_MODE: false
 
 # 5.x以后默认为sqlite
 # 存储方式，可选项：mysql，sqlite，mongodb；默认为sqlite
-DATABASE: "sqlite"
+DATABASE: "mongodb"
 
 # 部署方式，可选项：github，server；默认为github
 DEPLOY_TYPE: "github"
