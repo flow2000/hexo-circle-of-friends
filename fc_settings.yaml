@@ -77,7 +77,7 @@ DEPLOY_TYPE: "github"
 # 文章摘要
 # 参考: https://fcircle-doc.yyyzyyyz.cn/docs/configuration.html
 GENERATE_SUMMARY: {
-  enabled: false,   # 需要设置为true开启
+  enabled: true,   # 需要设置为true开启
   provider: "all",  # AI供应商，目前可选：gemini|siliconflow|bigmodel|all （使用 "all" 依次全部尝试），需要配置对应提供商的api key
   max_concurrent: 3,       # 最大并发数，默认3 (平衡速度与稳定性)
   wait_on_rate_limit: true, # 遇限速是否等待，默认true (提高成功率)
