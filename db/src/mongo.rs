@@ -153,8 +153,10 @@ pub async fn select_all_from_posts_with_summary(
     ];
 
     // 5. 如果需要分页，添加skip和limit
-    if start != 0 || end != 0 {
+    if start > 0 {
         pipeline.push(doc! { "$skip": start as i64 });
+    }
+    if end > 0 && end > start {
         pipeline.push(doc! { "$limit": (end - start) as i64 });
     }
 
