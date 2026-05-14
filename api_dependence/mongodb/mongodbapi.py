@@ -54,8 +54,9 @@ def query_all(li, start: int = 0, end: int = 0, rule: str = "updated"):
     ]
 
     # 5. 如果需要分页，添加skip和limit
-    if start != 0 or end != 0:
+    if start > 0:
         pipeline.append({"$skip": start})
+    if end > 0 and end > start:
         pipeline.append({"$limit": end - start})
 
     # 执行聚合查询
