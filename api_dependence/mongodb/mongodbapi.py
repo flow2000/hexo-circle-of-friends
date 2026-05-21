@@ -164,6 +164,16 @@ def query_post(link, num, rule):
         friend = friend_db_collection.find_one(
             {"link": {"$regex": domain}}, {"_id": 0, "createdAt": 0, "error": 0}
         )
+        # 如果 friends 表中找不到（可能是换域名了），尝试通过 posts 表反查
+        if friend is None:
+            sample_post = post_collection.find_one(
+                {"link": {"$regex": domain}}, {"_id": 0}
+            )
+            if sample_post is not None:
+                friend = friend_db_collection.find_one(
+                    {"name": sample_post.get("author")},
+                    {"_id": 0, "createdAt": 0, "error": 0},
+                )
 
     if rule != "created" and rule != "updated":
         return {"message": "rule error, please use 'created'/'updated'"}
