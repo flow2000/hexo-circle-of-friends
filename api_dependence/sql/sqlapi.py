@@ -178,6 +178,19 @@ def query_post(
             .filter(Friend.link.like("%{:s}%".format(domain)))
             .first()
         )
+        # 如果 friends 表中找不到（可能是换域名了），尝试通过 posts 表反查
+        if user is None:
+            sample_post = (
+                session.query(Post)
+                .filter(Post.link.like("%{:s}%".format(domain)))
+                .first()
+            )
+            if sample_post is not None:
+                user = (
+                    session.query(Friend)
+                    .filter(Friend.name == sample_post.author)
+                    .first()
+                )
 
     posts = (
         session.query(Post)
