@@ -193,11 +193,6 @@ jobs:
           add: "data.json --force"
           message: "Update data.json"
           default_author: github_actions
-      - name: Trigger Vercel Deploy
-        # 只有在定时任务或手动触发时，才去叫 Vercel 重新打包，防止代码 push 时造成循环构建
-        if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
-        run: |
-          curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}"
 
   keepalive-workflow:
     name: Keepalive Workflow
