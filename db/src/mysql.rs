@@ -12,8 +12,8 @@ pub async fn connect_mysql_dbpool(url: &str) -> Result<MySqlPool, Error> {
 
 pub async fn insert_post_table(post: &metadata::Posts, pool: &MySqlPool) -> Result<(), Error> {
     let sql = "INSERT INTO posts
-    (title, author, link, avatar ,rule,created,updated,createdAt)
-     VALUES (?, ?, ?,?, ?,?, ?, ?)";
+    (title, author, link, avatar ,rule,created,updated,createdAt,description)
+     VALUES (?, ?, ?,?, ?,?, ?, ?, ?)";
     let q = query(sql)
         .bind(&post.meta.title)
         .bind(&post.author)
@@ -22,7 +22,8 @@ pub async fn insert_post_table(post: &metadata::Posts, pool: &MySqlPool) -> Resu
         .bind(&post.meta.rule)
         .bind(&post.meta.created)
         .bind(&post.meta.updated)
-        .bind(&post.created_at);
+        .bind(&post.created_at)
+        .bind(&post.meta.description);
     // println!("sql: {},{:?}",q.sql(),q.take_arguments());
     q.execute(pool).await?;
     Ok(())
@@ -49,16 +50,10 @@ pub async fn bulk_insert_post_table(
     pool: &MySqlPool,
 ) -> Result<(), Error> {
     let mut query_builder: QueryBuilder<MySql> = QueryBuilder::new(
-        // Note the trailing space; most calls to `QueryBuilder` don't automatically insert
-        // spaces as that might interfere with identifiers or quoted strings where exact
-        // values may matter.
-        "INSERT INTO posts (title, author, link, avatar ,rule,created,updated,createdAt) ",
+        "INSERT INTO posts (title, author, link, avatar ,rule,created,updated,createdAt,description) ",
     );
 
     query_builder.push_values(tuples, |mut b, post| {
-        // If you wanted to bind these by-reference instead of by-value,
-        // you'd need an iterator that yields references that live as long as `query_builder`,
-        // e.g. collect it to a `Vec` first.
         b.push_bind(post.meta.title)
             .push_bind(post.author)
             .push_bind(post.meta.link)
@@ -66,7 +61,8 @@ pub async fn bulk_insert_post_table(
             .push_bind(post.meta.rule)
             .push_bind(post.meta.created)
             .push_bind(post.meta.updated)
-            .push_bind(post.created_at);
+            .push_bind(post.created_at)
+            .push_bind(post.meta.description);
     });
     let query = query_builder.build();
     query.execute(pool).await?;
@@ -162,7 +158,7 @@ pub async fn select_all_from_posts_with_summary(
 ) -> Result<Vec<metadata::PostsWithSummary>, Error> {
     let sql = if start == 0 && end == 0 {
         format!(
-            "SELECT p.title, p.created, p.updated, p.link, p.author, p.avatar, p.rule, p.createdAt,
+            "SELECT p.title, p.created, p.updated, p.link, p.author, p.avatar, p.rule, p.createdAt, p.description,
                     s.summary, s.ai_model, s.createdAt as summary_created_at, s.updatedAt as summary_updated_at
              FROM posts p
              LEFT JOIN article_summaries s ON p.link = s.link
@@ -170,7 +166,7 @@ pub async fn select_all_from_posts_with_summary(
         )
     } else {
         format!(
-            "SELECT p.title, p.created, p.updated, p.link, p.author, p.avatar, p.rule, p.createdAt,
+            "SELECT p.title, p.created, p.updated, p.link, p.author, p.avatar, p.rule, p.createdAt, p.description,
                     s.summary, s.ai_model, s.createdAt as summary_created_at, s.updatedAt as summary_updated_at
              FROM posts p
              LEFT JOIN article_summaries s ON p.link = s.link
@@ -185,12 +181,13 @@ pub async fn select_all_from_posts_with_summary(
     let mut posts_with_summary = Vec::new();
 
     for row in rows {
-        let base_post = metadata::BasePosts::new(
+        let base_post = metadata::BasePosts::new_with_description(
             row.get("title"),
             row.get("created"),
             row.get("updated"),
             row.get("link"),
             row.get("rule"),
+            row.try_get("description").ok(),
         );
 
         let post_with_summary = metadata::PostsWithSummary::new(
@@ -419,6 +416,7 @@ mod tests {
             updated: "2023-01-01".to_string(),
             link: "https://example.com/post".to_string(),
             rule: "test".to_string(),
+            description: None,
         };
 
         let post = Posts {
@@ -492,6 +490,7 @@ mod tests {
                     updated: "2023-01-01".to_string(),
                     link: "https://example.com/post1".to_string(),
                     rule: "test".to_string(),
+                    description: None,
                 },
                 author: "作者1".to_string(),
                 avatar: "https://example.com/avatar1.jpg".to_string(),
@@ -504,6 +503,7 @@ mod tests {
                     updated: "2023-01-02".to_string(),
                     link: "https://example.com/post2".to_string(),
                     rule: "test".to_string(),
+                    description: None,
                 },
                 author: "作者2".to_string(),
                 avatar: "https://example.com/avatar2.jpg".to_string(),
@@ -539,6 +539,7 @@ mod tests {
                     updated: "2023-01-01".to_string(),
                     link: "https://example.com/post1".to_string(),
                     rule: "test".to_string(),
+                    description: None,
                 },
                 author: "作者1".to_string(),
                 avatar: "https://example.com/avatar1.jpg".to_string(),
@@ -551,6 +552,7 @@ mod tests {
                     updated: "2023-01-02".to_string(),
                     link: "https://example.org/post2".to_string(),
                     rule: "test".to_string(),
+                    description: None,
                 },
                 author: "作者2".to_string(),
                 avatar: "https://example.org/avatar2.jpg".to_string(),
@@ -628,6 +630,7 @@ mod tests {
                     updated: "2023-01-01".to_string(),
                     link: "https://example.com/post1".to_string(),
                     rule: "test".to_string(),
+                    description: None,
                 },
                 author: "作者1".to_string(),
                 avatar: "https://example.com/avatar1.jpg".to_string(),
@@ -640,6 +643,7 @@ mod tests {
                     updated: "2023-01-02".to_string(),
                     link: "https://example.com/post2".to_string(),
                     rule: "test".to_string(),
+                    description: None,
                 },
                 author: "作者2".to_string(),
                 avatar: "https://example.com/avatar2.jpg".to_string(),

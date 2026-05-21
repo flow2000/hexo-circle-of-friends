@@ -140,6 +140,7 @@ pub async fn select_all_from_posts_with_summary(
                 "avatar": 1,
                 "rule": 1,
                 "createdAt": 1,
+                "description": 1,
                 "summary": { "$ifNull": ["$summary_data.summary", null] },
                 "ai_model": { "$ifNull": ["$summary_data.ai_model", null] },
                 "summary_created_at": { "$ifNull": ["$summary_data.createdAt", null] },
@@ -165,12 +166,13 @@ pub async fn select_all_from_posts_with_summary(
 
     while let Some(doc) = cursor.try_next().await? {
         // 手动构建 PostsWithSummary
-        let base_post = metadata::BasePosts::new(
+        let base_post = metadata::BasePosts::new_with_description(
             doc.get_str("title").unwrap_or("").to_string(),
             doc.get_str("created").unwrap_or("").to_string(),
             doc.get_str("updated").unwrap_or("").to_string(),
             doc.get_str("link").unwrap_or("").to_string(),
             doc.get_str("rule").unwrap_or("").to_string(),
+            doc.get_str("description").ok().map(|s| s.to_string()),
         );
 
         let post_with_summary = metadata::PostsWithSummary::new(
@@ -407,6 +409,7 @@ mod tests {
             updated: "2023-01-01".to_string(),
             link: "https://example.com/post".to_string(),
             rule: "test".to_string(),
+            description: None,
         };
 
         let post = Posts {
@@ -441,6 +444,7 @@ mod tests {
                     updated: "2023-01-01".to_string(),
                     link: "https://example.com/post1".to_string(),
                     rule: "test".to_string(),
+                    description: None,
                 },
                 author: "作者1".to_string(),
                 avatar: "https://example.com/avatar1.jpg".to_string(),
@@ -453,6 +457,7 @@ mod tests {
                     updated: "2023-01-02".to_string(),
                     link: "https://example.com/post2".to_string(),
                     rule: "test".to_string(),
+                    description: None,
                 },
                 author: "作者2".to_string(),
                 avatar: "https://example.com/avatar2.jpg".to_string(),
@@ -484,6 +489,7 @@ mod tests {
                     updated: "2023-01-01".to_string(),
                     link: "https://example.com/post1".to_string(),
                     rule: "test".to_string(),
+                    description: None,
                 },
                 author: "作者1".to_string(),
                 avatar: "https://example.com/avatar1.jpg".to_string(),
@@ -496,6 +502,7 @@ mod tests {
                     updated: "2023-01-02".to_string(),
                     link: "https://example.com/post2".to_string(),
                     rule: "test".to_string(),
+                    description: None,
                 },
                 author: "作者2".to_string(),
                 avatar: "https://example.com/avatar2.jpg".to_string(),
@@ -561,6 +568,7 @@ mod tests {
                     updated: "2023-01-01".to_string(),
                     link: "https://example.com/post1".to_string(),
                     rule: "test".to_string(),
+                    description: None,
                 },
                 author: "作者1".to_string(),
                 avatar: "https://example.com/avatar1.jpg".to_string(),
@@ -573,6 +581,7 @@ mod tests {
                     updated: "2023-01-02".to_string(),
                     link: "https://example.com/post2".to_string(),
                     rule: "test".to_string(),
+                    description: None,
                 },
                 author: "作者2".to_string(),
                 avatar: "https://example.com/avatar2.jpg".to_string(),
@@ -603,6 +612,7 @@ mod tests {
                     updated: today.clone(),
                     link: "https://example.com/post1".to_string(),
                     rule: "test".to_string(),
+                    description: None,
                 },
                 author: "作者1".to_string(),
                 avatar: "https://example.com/avatar1.jpg".to_string(),
@@ -615,6 +625,7 @@ mod tests {
                     updated: old_date.clone(),
                     link: "https://example.com/post2".to_string(),
                     rule: "test".to_string(),
+                    description: None,
                 },
                 author: "作者2".to_string(),
                 avatar: "https://example.com/avatar2.jpg".to_string(),

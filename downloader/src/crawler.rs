@@ -223,6 +223,17 @@ pub async fn crawl_post_page_feed(
                     }
                 },
             };
+            // 描述（从summary或content中提取）
+            let description = entry
+                .summary
+                .map(|s| decode_html_entities(&s.content).to_string())
+                .or_else(|| {
+                    entry
+                        .content
+                        .and_then(|c| c.body)
+                        .map(|b| decode_html_entities(&b).to_string())
+                });
+
             // 时间
             let published_time = entry
                 .published
@@ -238,8 +249,14 @@ pub async fn crawl_post_page_feed(
                 .or(updated_time.clone())
                 .unwrap_or(fallback_time.clone());
             let updated = updated_time.or(published_time).unwrap_or(fallback_time);
-            let base_post =
-                metadata::BasePosts::new(title, created, updated, link, "feed".to_string());
+            let base_post = metadata::BasePosts::new_with_description(
+                title,
+                created,
+                updated,
+                link,
+                "feed".to_string(),
+                description,
+            );
             format_base_posts.push(base_post);
         }
         Ok(format_base_posts)
