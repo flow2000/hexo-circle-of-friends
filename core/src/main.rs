@@ -63,6 +63,7 @@ fn should_update_summary(
 }
 
 /// 需要生成摘要的文章信息
+#[derive(Debug)]
 struct PendingSummary {
     link: String,
     html_content: String,
