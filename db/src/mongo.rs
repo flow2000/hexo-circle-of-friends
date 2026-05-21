@@ -335,7 +335,6 @@ pub async fn delete_article_summary_by_link(
     Ok(())
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
