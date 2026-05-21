@@ -224,18 +224,14 @@ pub async fn crawl_post_page_feed(
                 },
             };
             // 时间
-            let updated = match entry.updated {
-                Some(t) => tools::strptime_to_string_ymd(t.fixed_offset()),
-                None => tools::strptime_to_string_ymd(
-                    Utc::now().with_timezone(&BEIJING_OFFSET.unwrap()),
-                ),
-            };
+            let published_time = entry.published.map(|t| tools::strptime_to_string_ymd(t.fixed_offset()));
+            let updated_time = entry.updated.map(|t| tools::strptime_to_string_ymd(t.fixed_offset()));
+            let fallback_time = tools::strptime_to_string_ymd(
+                Utc::now().with_timezone(&BEIJING_OFFSET.unwrap()),
+            );
 
-            let created = match entry.published {
-                Some(t) => tools::strptime_to_string_ymd(t.fixed_offset()),
-                // 没有published时使用updated时间，而不是当前时间
-                None => updated.clone(),
-            };
+            let created = published_time.clone().or(updated_time.clone()).unwrap_or(fallback_time.clone());
+            let updated = updated_time.or(published_time).unwrap_or(fallback_time);
             let base_post =
                 metadata::BasePosts::new(title, created, updated, link, "feed".to_string());
             format_base_posts.push(base_post);
