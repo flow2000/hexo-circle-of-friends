@@ -10,8 +10,8 @@ from api_dependence.mongodb import db_interface
 def query_all(li, start: int = 0, end: int = 0, rule: str = "updated"):
     """查询所有文章，包含摘要信息（与SQL版本一致）"""
     session = db_interface.db_init()
-    post_collection = session.Post
-    friend_db_collection = session.Friend
+    post_collection = session.Posts
+    friend_db_collection = session.Friends
 
     article_num = post_collection.count_documents({})
 
@@ -107,7 +107,7 @@ def query_all(li, start: int = 0, end: int = 0, rule: str = "updated"):
 
 def query_friend():
     session = db_interface.db_init()
-    friend_db_collection = session.Friend
+    friend_db_collection = session.Friends
     friends = friend_db_collection.find({}, {"_id": 0})
     friend_list_json = []
     if friends:
@@ -121,7 +121,7 @@ def query_friend():
 
 def query_random_friend(num):
     session = db_interface.db_init()
-    friend_db_collection = session.Friend
+    friend_db_collection = session.Friends
     friends = list(friend_db_collection.find({}, {"_id": 0}))
     try:
         if num < 1:
@@ -138,7 +138,7 @@ def query_random_friend(num):
 
 def query_random_post(num):
     session = db_interface.db_init()
-    post_collection = session.Post
+    post_collection = session.Posts
     posts = list(post_collection.find({}, {"_id": 0, "floor": 0}))
     try:
         if num < 1:
@@ -155,7 +155,7 @@ def query_random_post(num):
 
 def query_post(link, num, rule):
     session = db_interface.db_init()
-    post_collection, friend_db_collection = session.Post, session.Friend
+    post_collection, friend_db_collection = session.Posts, session.Friends
     if link is None:
         friend = query_random_friend(1)
         domain = parse.urlsplit(friend.get("link")).netloc  # type: ignore
