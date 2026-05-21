@@ -62,17 +62,11 @@ def query_all(li, start: int = 0, end: int = 0, rule: str = "updated"):
     # 执行聚合查询
     posts_with_summary = list(post_collection.aggregate(pipeline))
 
-    # 计算last_update_time
-    last_update_time_results = list(
-        post_collection.find({}, {"createdAt": 1, "_id": 0}).limit(1000)
+    # 计算last_update_time - 直接查询最新的一条
+    latest_doc = post_collection.find_one(
+        {}, {"createdAt": 1, "_id": 0}, sort=[("createdAt", -1)]
     )
-    if last_update_time_results:
-        last_update_time = max(
-            doc.get("createdAt", "1970-01-01 00:00:00")
-            for doc in last_update_time_results
-        )
-    else:
-        last_update_time = "1970-01-01 00:00:00"
+    last_update_time = latest_doc.get("createdAt", "1970-01-01 00:00:00") if latest_doc else "1970-01-01 00:00:00"
 
     # 统计朋友信息
     friends_num = friend_db_collection.count_documents({})
