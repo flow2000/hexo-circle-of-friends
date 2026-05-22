@@ -146,11 +146,13 @@ pub async fn get_post(
         }
     };
     // 使用域名匹配 posts 表，而不是完整的 friend.link URL
+    let sort_rule = params.sort_rule.unwrap_or(String::from("created"));
+    let num = params.num.unwrap_or(-1);
     let posts = match mongo::select_all_from_posts_with_linklike(
         &pool,
         &search_domain,
-        params.num.unwrap_or(-1),
-        &params.sort_rule.unwrap_or(String::from("created")),
+        num,
+        &sort_rule,
     )
     .await
     {
@@ -163,8 +165,8 @@ pub async fn get_post(
         match mongo::select_posts_by_author(
             &pool,
             &friend.name,
-            params.num.unwrap_or(-1),
-            &params.sort_rule.unwrap_or(String::from("created")),
+            num,
+            &sort_rule,
         )
         .await
         {
