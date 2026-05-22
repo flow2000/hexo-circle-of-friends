@@ -39,6 +39,7 @@ pub mod metadata {
         pub rule: String,
         /// RSS/Atom feed 中的文章描述
         #[serde(default)]
+        #[sqlx(default)]
         pub description: Option<String>,
     }
 

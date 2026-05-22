@@ -520,10 +520,11 @@ async fn main() {
             match sqlx::migrate!("../db/schema/sqlite").run(&dbpool).await {
                 Ok(()) => (),
                 Err(e) => {
-                    info!("{}", e);
-                    return;
+                    info!("迁移提示(可忽略): {}", e);
                 }
             };
+            // 确保 description 列存在（兼容老版本数据库）
+            sqlite::ensure_description_column(&dbpool).await;
             if let Err(e) = sqlite::truncate_friend_table(&dbpool).await {
                 error!("{}", e);
                 return;
@@ -596,10 +597,11 @@ async fn main() {
             match sqlx::migrate!("../db/schema/mysql").run(&dbpool).await {
                 Ok(()) => (),
                 Err(e) => {
-                    info!("{}", e);
-                    return;
+                    info!("迁移提示(可忽略): {}", e);
                 }
             };
+            // 确保 description 列存在（兼容老版本数据库）
+            mysql::ensure_description_column(&dbpool).await;
             if let Err(e) = mysql::truncate_friend_table(&dbpool).await {
                 error!("{}", e);
                 return;

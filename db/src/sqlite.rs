@@ -5,6 +5,29 @@ use sqlx::{
 };
 use std::path::Path;
 
+/// 检查 posts 表是否存在 description 列
+async fn has_description_column(pool: &SqlitePool) -> bool {
+    let result = query("SELECT COUNT(*) as cnt FROM pragma_table_info('posts') WHERE name='description'")
+        .fetch_one(pool)
+        .await;
+    match result {
+        Ok(row) => {
+            let cnt: i32 = row.get("cnt");
+            cnt > 0
+        }
+        Err(_) => false,
+    }
+}
+
+/// 确保 posts 表包含 description 列，如果不存在则自动添加
+pub async fn ensure_description_column(pool: &SqlitePool) {
+    if !has_description_column(pool).await {
+        let _ = query("ALTER TABLE posts ADD COLUMN description TEXT")
+            .execute(pool)
+            .await;
+    }
+}
+
 pub async fn connect_sqlite_dbpool(filename: impl AsRef<Path>) -> Result<SqlitePool, Error> {
     let options = SqliteConnectOptions::new()
         .filename(filename)
@@ -16,21 +39,36 @@ pub async fn connect_sqlite_dbpool(filename: impl AsRef<Path>) -> Result<SqliteP
 }
 
 pub async fn insert_post_table(post: &metadata::Posts, pool: &SqlitePool) -> Result<(), Error> {
-    let sql = "INSERT INTO posts
-    (title, author, link, avatar ,rule,created,updated,createdAt,description)
-     VALUES (?, ?, ?,?, ?,?, ?, ?, ?)";
-    let q = query(sql)
-        .bind(&post.meta.title)
-        .bind(&post.author)
-        .bind(&post.meta.link)
-        .bind(&post.avatar)
-        .bind(&post.meta.rule)
-        .bind(&post.meta.created)
-        .bind(&post.meta.updated)
-        .bind(&post.created_at)
-        .bind(&post.meta.description);
-    // println!("sql: {},{:?}",q.sql(),q.take_arguments());
-    q.execute(pool).await?;
+    if has_description_column(pool).await {
+        let sql = "INSERT INTO posts
+        (title, author, link, avatar ,rule,created,updated,createdAt,description)
+         VALUES (?, ?, ?,?, ?,?, ?, ?, ?)";
+        let q = query(sql)
+            .bind(&post.meta.title)
+            .bind(&post.author)
+            .bind(&post.meta.link)
+            .bind(&post.avatar)
+            .bind(&post.meta.rule)
+            .bind(&post.meta.created)
+            .bind(&post.meta.updated)
+            .bind(&post.created_at)
+            .bind(&post.meta.description);
+        q.execute(pool).await?;
+    } else {
+        let sql = "INSERT INTO posts
+        (title, author, link, avatar ,rule,created,updated,createdAt)
+         VALUES (?, ?, ?,?, ?,?, ?, ?)";
+        let q = query(sql)
+            .bind(&post.meta.title)
+            .bind(&post.author)
+            .bind(&post.meta.link)
+            .bind(&post.avatar)
+            .bind(&post.meta.rule)
+            .bind(&post.meta.created)
+            .bind(&post.meta.updated)
+            .bind(&post.created_at);
+        q.execute(pool).await?;
+    }
     Ok(())
 }
 
@@ -54,23 +92,42 @@ pub async fn bulk_insert_post_table(
     tuples: impl Iterator<Item = metadata::Posts>,
     pool: &SqlitePool,
 ) -> Result<(), Error> {
-    let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new(
-        "INSERT INTO posts (title, author, link, avatar ,rule,created,updated,createdAt,description) ",
-    );
+    if has_description_column(pool).await {
+        let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new(
+            "INSERT INTO posts (title, author, link, avatar ,rule,created,updated,createdAt,description) ",
+        );
 
-    query_builder.push_values(tuples, |mut b, post| {
-        b.push_bind(post.meta.title)
-            .push_bind(post.author)
-            .push_bind(post.meta.link)
-            .push_bind(post.avatar)
-            .push_bind(post.meta.rule)
-            .push_bind(post.meta.created)
-            .push_bind(post.meta.updated)
-            .push_bind(post.created_at)
-            .push_bind(post.meta.description);
-    });
-    let query = query_builder.build();
-    query.execute(pool).await?;
+        query_builder.push_values(tuples, |mut b, post| {
+            b.push_bind(post.meta.title)
+                .push_bind(post.author)
+                .push_bind(post.meta.link)
+                .push_bind(post.avatar)
+                .push_bind(post.meta.rule)
+                .push_bind(post.meta.created)
+                .push_bind(post.meta.updated)
+                .push_bind(post.created_at)
+                .push_bind(post.meta.description);
+        });
+        let query = query_builder.build();
+        query.execute(pool).await?;
+    } else {
+        let mut query_builder: QueryBuilder<Sqlite> = QueryBuilder::new(
+            "INSERT INTO posts (title, author, link, avatar ,rule,created,updated,createdAt) ",
+        );
+
+        query_builder.push_values(tuples, |mut b, post| {
+            b.push_bind(post.meta.title)
+                .push_bind(post.author)
+                .push_bind(post.meta.link)
+                .push_bind(post.avatar)
+                .push_bind(post.meta.rule)
+                .push_bind(post.meta.created)
+                .push_bind(post.meta.updated)
+                .push_bind(post.created_at);
+        });
+        let query = query_builder.build();
+        query.execute(pool).await?;
+    }
     Ok(())
 }
 
@@ -161,9 +218,12 @@ pub async fn select_all_from_posts_with_summary(
     end: usize,
     sort_rule: &str,
 ) -> Result<Vec<metadata::PostsWithSummary>, Error> {
+    let has_desc = has_description_column(pool).await;
+    let desc_col = if has_desc { ", p.description" } else { "" };
+
     let sql = if start == 0 && end == 0 {
         format!(
-            "SELECT p.title, p.created, p.updated, p.link, p.author, p.avatar, p.rule, p.createdAt, p.description,
+            "SELECT p.title, p.created, p.updated, p.link, p.author, p.avatar, p.rule, p.createdAt{desc_col},
                     s.summary, s.ai_model, s.createdAt as summary_created_at, s.updatedAt as summary_updated_at
              FROM posts p
              LEFT JOIN article_summaries s ON p.link = s.link
@@ -171,7 +231,7 @@ pub async fn select_all_from_posts_with_summary(
         )
     } else {
         format!(
-            "SELECT p.title, p.created, p.updated, p.link, p.author, p.avatar, p.rule, p.createdAt, p.description,
+            "SELECT p.title, p.created, p.updated, p.link, p.author, p.avatar, p.rule, p.createdAt{desc_col},
                     s.summary, s.ai_model, s.createdAt as summary_created_at, s.updatedAt as summary_updated_at
              FROM posts p
              LEFT JOIN article_summaries s ON p.link = s.link
@@ -186,13 +246,19 @@ pub async fn select_all_from_posts_with_summary(
     let mut posts_with_summary = Vec::new();
 
     for row in rows {
+        let description = if has_desc {
+            row.try_get("description").ok()
+        } else {
+            None
+        };
+
         let base_post = metadata::BasePosts::new_with_description(
             row.get("title"),
             row.get("created"),
             row.get("updated"),
             row.get("link"),
             row.get("rule"),
-            row.try_get("description").ok(),
+            description,
         );
 
         let post_with_summary = metadata::PostsWithSummary::new(
