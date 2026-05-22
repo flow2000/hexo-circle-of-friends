@@ -157,6 +157,23 @@ pub async fn get_post(
         Ok(v) => v,
         Err(e) => return Err(PYQError::QueryDataBaseError(e.to_string())),
     };
+
+    // 如果域名匹配不到文章（可能站点换了域名），用 author 名字匹配
+    let posts = if posts.is_empty() {
+        match mongo::select_posts_by_author(
+            &pool,
+            &friend.name,
+            params.num.unwrap_or(-1),
+            &params.sort_rule.unwrap_or(String::from("created")),
+        )
+        .await
+        {
+            Ok(v) => v,
+            Err(_) => posts,
+        }
+    } else {
+        posts
+    };
     let data = AllPostDataSomeFriend::new(
         friend.name,
         friend.link,

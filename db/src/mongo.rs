@@ -268,6 +268,31 @@ pub async fn select_all_from_posts_with_linklike(
     Ok(posts)
 }
 
+/// 根据 author 名字查询文章
+pub async fn select_posts_by_author(
+    pool: &MongoDatabase,
+    author: &str,
+    num: i32,
+    sort_rule: &str,
+) -> Result<Vec<metadata::Posts>, Error> {
+    let collection = pool.collection::<Posts>("Post");
+    let cursor = if num > 0 {
+        collection
+            .find(doc! {"author": author})
+            .sort(doc! {sort_rule: -1})
+            .limit(num as i64)
+            .await?
+    } else {
+        collection
+            .find(doc! {"author": author})
+            .sort(doc! {sort_rule: -1})
+            .await?
+    };
+
+    let posts = cursor.try_collect().await?;
+    Ok(posts)
+}
+
 pub async fn delete_outdated_posts(days: usize, clientdb: &MongoDatabase) -> Result<usize, Error> {
     if days == 0 {
         return Ok(0);
