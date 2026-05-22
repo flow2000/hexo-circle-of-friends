@@ -1,4 +1,4 @@
-use chrono::{FixedOffset, Utc};
+use chrono::FixedOffset;
 use data_structures::metadata;
 use feed_rs::parser;
 use html_escape::decode_html_entities;
@@ -241,14 +241,14 @@ pub async fn crawl_post_page_feed(
             let updated_time = entry
                 .updated
                 .map(|t| tools::strptime_to_string_ymd(t.fixed_offset()));
-            let fallback_time =
-                tools::strptime_to_string_ymd(Utc::now().with_timezone(&BEIJING_OFFSET.unwrap()));
 
+            // 当feed没有任何时间信息时，使用空字符串而非当前时间
+            // 避免每次爬取都将无时间的文章标记为"今天"
             let created = published_time
                 .clone()
                 .or(updated_time.clone())
-                .unwrap_or(fallback_time.clone());
-            let updated = updated_time.or(published_time).unwrap_or(fallback_time);
+                .unwrap_or_default();
+            let updated = updated_time.or(published_time).unwrap_or_default();
             let base_post = metadata::BasePosts::new_with_description(
                 title,
                 created,
