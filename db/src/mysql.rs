@@ -262,7 +262,7 @@ pub async fn delete_outdated_posts(days: usize, dbpool: &MySqlPool) -> Result<us
     if days == 0 {
         return Ok(0);
     }
-    let sql = "DELETE FROM posts WHERE DATE(updated) < DATE_SUB(CURDATE(), INTERVAL ? DAY)";
+    let sql = "DELETE FROM posts WHERE updated != '' AND DATE(updated) < DATE_SUB(CURDATE(), INTERVAL ? DAY)";
     let affected_rows = query(sql).bind(days as i64).execute(dbpool).await?;
 
     Ok(affected_rows.rows_affected() as usize)

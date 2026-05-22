@@ -274,7 +274,12 @@ pub async fn delete_outdated_posts(days: usize, clientdb: &MongoDatabase) -> Res
     }
     let now = Local::now() - Duration::days(days as i64);
     let collection = clientdb.collection::<Posts>("Post");
-    let filter = doc! { "updated": doc! { "$lt": now.format("%Y-%m-%d").to_string() } };
+    let filter = doc! {
+        "updated": doc! {
+            "$lt": now.format("%Y-%m-%d").to_string(),
+            "$ne": ""
+        }
+    };
     let result = collection.delete_many(filter).await?;
     Ok(result.deleted_count as usize)
 }

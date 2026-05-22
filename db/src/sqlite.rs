@@ -275,7 +275,9 @@ pub async fn delete_outdated_posts(days: usize, dbpool: &SqlitePool) -> Result<u
     if days == 0 {
         return Ok(0);
     }
-    let sql = format!("DELETE FROM posts WHERE date(updated) < date('now', '-{days} days')");
+    let sql = format!(
+        "DELETE FROM posts WHERE updated != '' AND date(updated) < date('now', '-{days} days')"
+    );
     let affected_rows = query(&sql).execute(dbpool).await?;
 
     Ok(affected_rows.rows_affected() as usize)
