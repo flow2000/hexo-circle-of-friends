@@ -43,6 +43,7 @@ def query_all(li, start: int = 0, end: int = 0, rule: str = "updated"):
                 "author": 1,
                 "avatar": 1,
                 "createdAt": 1,
+                "description": 1,
                 "summary": {"$ifNull": ["$summary_data.summary", None]},
                 "ai_model": {"$ifNull": ["$summary_data.ai_model", None]},
                 "summary_created_at": {"$ifNull": ["$summary_data.createdAt", None]},
@@ -54,24 +55,19 @@ def query_all(li, start: int = 0, end: int = 0, rule: str = "updated"):
     ]
 
     # 5. 如果需要分页，添加skip和limit
-    if start != 0 or end != 0:
+    if start > 0:
         pipeline.append({"$skip": start})
+    if end > 0 and end > start:
         pipeline.append({"$limit": end - start})
 
     # 执行聚合查询
     posts_with_summary = list(post_collection.aggregate(pipeline))
 
-    # 计算last_update_time
-    last_update_time_results = list(
-        post_collection.find({}, {"createdAt": 1, "_id": 0}).limit(1000)
+    # 计算last_update_time - 直接查询最新的一条
+    latest_doc = post_collection.find_one(
+        {}, {"createdAt": 1, "_id": 0}, sort=[("createdAt", -1)]
     )
-    if last_update_time_results:
-        last_update_time = max(
-            doc.get("createdAt", "1970-01-01 00:00:00")
-            for doc in last_update_time_results
-        )
-    else:
-        last_update_time = "1970-01-01 00:00:00"
+    last_update_time = latest_doc.get("createdAt", "1970-01-01 00:00:00") if latest_doc else "1970-01-01 00:00:00"
 
     # 统计朋友信息
     friends_num = friend_db_collection.count_documents({})
@@ -99,6 +95,7 @@ def query_all(li, start: int = 0, end: int = 0, rule: str = "updated"):
             item[elem] = post.get(elem)
 
         # 添加摘要相关字段
+        item["description"] = post.get("description")
         item["summary"] = post.get("summary")
         item["ai_model"] = post.get("ai_model")
         item["summary_created_at"] = post.get("summary_created_at")
@@ -169,6 +166,16 @@ def query_post(link, num, rule):
         friend = friend_db_collection.find_one(
             {"link": {"$regex": domain}}, {"_id": 0, "createdAt": 0, "error": 0}
         )
+        # 如果 friends 表中找不到（可能是换域名了），尝试通过 posts 表反查
+        if friend is None:
+            sample_post = post_collection.find_one(
+                {"link": {"$regex": domain}}, {"_id": 0}
+            )
+            if sample_post is not None:
+                friend = friend_db_collection.find_one(
+                    {"name": sample_post.get("author")},
+                    {"_id": 0, "createdAt": 0, "error": 0},
+                )
 
     if rule != "created" and rule != "updated":
         return {"message": "rule error, please use 'created'/'updated'"}
