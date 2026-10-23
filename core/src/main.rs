@@ -343,7 +343,7 @@ async fn main() {
     // 清理过期文章
     let today = now.date_naive();
     let before_clean = posts.len();
-    posts.retain(|post| !is_outdated(&post.updated, today, fc_settings.outdate_clean));
+    posts.retain(|post| !is_outdated(&post.meta.updated, today, fc_settings.outdate_clean));
     let cleaned = before_clean - posts.len();
 
     // 生成文章摘要
