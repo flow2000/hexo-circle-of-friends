@@ -1,5 +1,5 @@
 {
-  "name": "fcircle-api-worker",
+  "name": "fcircle-aqcoder-worker",
   "private": true,
   "type": "module",
   "scripts": {
