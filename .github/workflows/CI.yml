@@ -9,6 +9,11 @@ on:
     - cron: "5 18 * * *"
   workflow_dispatch:
 
+# 串行执行，避免定时任务与手动/推送触发的任务同时提交 data.json 导致推送冲突
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   CARGO_TERM_COLOR: always
   # 在这里查看需要添加的 secret
@@ -137,6 +142,7 @@ jobs:
           add: "data.json --force"
           message: "Update data.json"
           default_author: github_actions
+          pull: "--rebase --autostash"
       - name: Copy data.json for Cloudflare Worker
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
         run: cp data.json cloudflare/public/data.json
