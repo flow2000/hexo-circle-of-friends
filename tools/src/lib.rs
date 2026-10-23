@@ -52,7 +52,6 @@ pub fn init_tracing(logger_name: &str, filter_str: Option<&str>) -> WorkerGuard 
         .fmt_fields(format::PrettyFields::new().with_ansi(false))
         .with_writer(non_blocking)
         .compact();
-    // let filter = EnvFilter::new("trace,tower_http=trace,sqlx::query=info");
     let global_filter = if let Some(filter_str) = filter_str {
         EnvFilter::new(filter_str)
     } else {

@@ -68,15 +68,8 @@ MAX_POSTS_NUM:  5
 # 过期文章清除（天）
 OUTDATE_CLEAN: 60
 
-# 定时任务，每天0点、6点、12点、18点、21点执行一次
-CRON: "0 0,6,12,18,21 * * *"
-
-# 极简模式是否开启
-SIMPLE_MODE: false
-
-# 5.x以后默认为sqlite
-# 存储方式，可选项：mysql，sqlite，mongodb；默认为sqlite
-DATABASE: "sqlite"
+# 定时任务，每天 02:05 执行一次（数据保存为 data.json）
+CRON: "5 2 * * *"
 
 # 部署方式，可选项：github，server；默认为github
 DEPLOY_TYPE: "github"

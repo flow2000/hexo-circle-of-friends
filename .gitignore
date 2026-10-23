@@ -3,10 +3,7 @@
 /core/target
 /data_structures/target
 /tools/target
-/db/target
 .vscode/
-*.db
-data.json
 .DS_Store
 logs/
 __pycache__/
@@ -21,4 +18,8 @@ __pycache__/
 .vercel
 .pytest_cache
 tmptest
+# Cloudflare Worker 构建产物（data.json 由 CI 复制）
+cloudflare/public/data.json
+cloudflare/node_modules/
+cloudflare/.wrangler/
 

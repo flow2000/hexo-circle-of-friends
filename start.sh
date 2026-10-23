@@ -75,17 +75,21 @@ echo -e "${YELLOW}检查二进制程序...${NC}"
 # 示例代码:
 # latest_release=$(curl -s https://api.github.com/repos/username/repo/releases/latest | grep "tag_name" | cut -d'"' -f4)
 # curl -L https://github.com/username/repo/releases/download/${latest_release}/core -o core
-# curl -L https://github.com/username/repo/releases/download/${latest_release}/api -o api
+
+# 检查 Python API 依赖
+if ! python3 -c "import fastapi, uvicorn, yaml" >/dev/null 2>&1; then
+    echo -e "${RED}错误: 缺少 Python 依赖，请先执行: pip install -e .${NC}"
+    exit 1
+fi
 
 # 检查二进制文件是否存在
-if [ ! -f "./fcircle_core" ] || [ ! -f "./fcircle_api" ]; then
-    echo -e "${RED}错误: 找不到二进制文件 fcircle_core 或 fcircle_api${NC}"
+if [ ! -f "./fcircle_core" ]; then
+    echo -e "${RED}错误: 找不到二进制文件 fcircle_core${NC}"
     exit 1
 fi
 
 # 确保二进制文件有执行权限
 chmod +x ./fcircle_core
-chmod +x ./fcircle_api
 
 # 5. 设置定时任务并立即运行core
 echo -e "${YELLOW}设置定时任务...${NC}"
@@ -101,7 +105,7 @@ fi
 
 # 6. 先启动API服务，使用用户指定的端口
 echo -e "${YELLOW}启动API服务在端口 ${api_port}...${NC}"
-nohup ./fcircle_api -p "$api_port" >/dev/null 2>&1 &
+nohup python3 -m uvicorn api.vercel:app --host 0.0.0.0 --port "$api_port" >/dev/null 2>&1 &
 api_pid=$!
 
 # 等待一下确认API是否成功启动
@@ -125,6 +129,7 @@ echo -e "${BLUE}=====================================${NC}"
 echo -e "${GREEN}安装完成!${NC}"
 echo -e "${YELLOW}提示:${NC}"
 echo -e "- 运行日志位于 ./logs/ 目录"
+echo -e "- 数据保存于 ./data.json"
 echo -e "- API服务地址: http://localhost:${api_port}"
 echo -e "- API服务进程ID: ${api_pid}"
 echo -e "- 首次fcircle_core任务进程ID: ${core_pid}"

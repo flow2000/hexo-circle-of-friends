@@ -37,11 +37,6 @@ def get_user_settings():
     return user_conf
 
 
-def is_vercel_sqlite():
-    settings = get_user_settings()
-    return os.environ.get("VERCEL") and settings["DATABASE"] == "sqlite"
-
-
 def is_vercel():
     return os.environ.get("VERCEL")
 

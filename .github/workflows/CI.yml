@@ -5,21 +5,14 @@ on:
     tags:
       - "v*.*.*"
   schedule:
-    - cron: "0 0 * * *"
+    # 每天 02:05（Asia/Shanghai，UTC+8）执行；GitHub Actions 的 cron 使用 UTC
+    - cron: "5 18 * * *"
   workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
-  # 在这里查看需要添加的secert
-  # 通用配置
-  SIMPLE_MODE: false # 极简模式是否开启，默认false
-  DATABASE: sqlite # 默认使用sqlite
+  # 在这里查看需要添加的 secret
   PROXY: ${{ secrets.PROXY }} # 可选，http代理
-  # mysql、sqlite、mongodb配置三选一即可
-  # mysql配置
-  MYSQL_URI: ${{ secrets.MYSQL_URI }} # MySQL URI
-  # mongodb配置
-  MONGODB_URI: ${{ secrets.MONGODB_URI }} # mongodb URI 支持'mongodb://'和'mongodb+srv://'
   # gemini：https://ai.google.dev/gemini-api/docs/api-key?hl=zh-cn
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
   # siliconflow：https://cloud.siliconflow.cn/me/account/ak
@@ -39,50 +32,26 @@ jobs:
         with:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
-        # with:
-        # save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Check
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
       - name: rustfmt
         run: cargo fmt --all --check
 
-  test-versions:
+  test:
     if: ${{ (github.ref != 'refs/heads/main') || ( github.repository == 'Rock-Candy-Tea/hexo-circle-of-friends' && github.ref_type == 'tag') }}
     needs: check
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:${{ matrix.mysql }}
-        env:
-          MYSQL_ROOT_PASSWORD: 123456
-          MYSQL_DATABASE: pyq
-        ports:
-          - 3306:3306
-      mongodb:
-        image: mongodb/mongodb-community-server:${{ matrix.mongodb }}
-        env:
-          MONGO_INITDB_ROOT_USERNAME: root
-          MONGO_INITDB_ROOT_PASSWORD: 123456
-        ports:
-          - 27017:27017
-    strategy:
-      matrix:
-        rust: [stable, beta, nightly]
-        mysql: [8, 8.4, 9, 9.3, latest, lts]
-        mongodb: [latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
+      - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run tests
         run: cargo test --workspace --all-features --all-targets -- --test-threads=1
 
   build-and-release:
     if: ${{ github.ref_type == 'tag' }}
-    needs: [check, test-versions]
-    runs-on: ${{ matrix.runner }} # 定义作业运行的操作系统
+    needs: [check, test]
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
         include:
@@ -119,19 +88,19 @@ jobs:
         with:
           command: build
           target: ${{ matrix.target }}
-          args: "--locked --release"
+          args: "--release"
 
       - name: Package binaries (Linux/macOS)
         if: ${{ runner.os != 'Windows' }}
         run: |
           mkdir -p dist
-          zip -j dist/${{ matrix.name }}.zip target/${{ matrix.target }}/release/fcircle_core target/${{ matrix.target }}/release/fcircle_api
+          zip -j dist/${{ matrix.name }}.zip target/${{ matrix.target }}/release/fcircle_core
 
       - name: Package binaries (Windows)
         if: ${{ runner.os == 'Windows' }}
         run: |
           mkdir dist
-          Compress-Archive -Path "target\${{ matrix.target }}\release\fcircle_core.exe","target\${{ matrix.target }}\release\fcircle_api.exe" -DestinationPath "dist\${{ matrix.name }}.zip"
+          Compress-Archive -Path "target\${{ matrix.target }}\release\fcircle_core.exe" -DestinationPath "dist\${{ matrix.name }}.zip"
         shell: pwsh
 
       - name: Upload artifact
@@ -148,56 +117,41 @@ jobs:
 
   build-and-run-core:
     if: ${{ github.ref_type != 'tag' && github.repository != 'Rock-Candy-Tea/hexo-circle-of-friends' }}
-    # needs: [check, test-versions]
     name: build and run core
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@main
       - uses: Swatinem/rust-cache@v2
       - name: Build
-        run: cargo build --release
-      - name: Read Config Values
-        id: read_config
-        run: |
-          echo "Reading configuration from fc_settings.yaml"
-          DEPLOY_TYPE=$(grep "DEPLOY_TYPE:" fc_settings.yaml | awk '{print $2}' | tr -d '"')
-          DATABASE=$(grep "DATABASE:" fc_settings.yaml | awk '{print $2}' | tr -d '"')
-          SIMPLE_MODE=$(grep "SIMPLE_MODE:" fc_settings.yaml | awk '{print $2}' | tr -d '"')
-          echo "DEPLOY_TYPE=$DEPLOY_TYPE" >> $GITHUB_ENV
-          echo "DATABASE=$DATABASE" >> $GITHUB_ENV
-          echo "SIMPLE_MODE=$SIMPLE_MODE" >> $GITHUB_ENV
-          echo "Configuration values: DEPLOY_TYPE=$DEPLOY_TYPE, DATABASE=$DATABASE, SIMPLE_MODE=$SIMPLE_MODE"
+        run: cargo build --release --bin fcircle_core
       - name: Run Core
         run: cargo run --bin fcircle_core --release
-      - name: Debug Environment
-        run: |
-          echo "DATABASE value: ${{ env.DATABASE }}"
-          echo "Condition check: ${{ env.DATABASE == 'sqlite' }}"
-          echo "DEPLOY_TYPE value: ${{ env.DEPLOY_TYPE }}"
-          echo "Condition check: ${{ env.DEPLOY_TYPE == 'github' }}"
-          echo "SIMPLE_MODE value: ${{ env.SIMPLE_MODE }}"
-          echo "Condition check: ${{ env.SIMPLE_MODE == 'true' }}"
-
-      - name: Push sqlite data # sqlite push
-        if: ${{ env.DATABASE == 'sqlite' }}
-        uses: EndBug/add-and-commit@v9
-        with:
-          add: "data.db --force"
-          message: "Update data.db"
-          default_author: github_actions
-      - name: simple mode push # 推送极简模式
-        if: ${{ env.SIMPLE_MODE == 'true' }}
+      - name: Push data.json
         uses: EndBug/add-and-commit@v9
         with:
           add: "data.json --force"
           message: "Update data.json"
           default_author: github_actions
+      - name: Copy data.json for Cloudflare Worker
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        run: cp data.json cloudflare/public/data.json
+      - name: Deploy Cloudflare Worker
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cloudflare
+          command: deploy
 
   keepalive-workflow:
     name: Keepalive Workflow
     if: github.event_name == 'schedule'
-    # needs: build-and-run-core
     runs-on: ubuntu-latest
     permissions:
       actions: write

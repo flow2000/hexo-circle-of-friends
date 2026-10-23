@@ -4,9 +4,6 @@ members = [
     "data_structures",
     "core",
     "tools",
-    "db",
-    "api",
-    "api_dependence",
 ]
 resolver = "2"
 
@@ -29,22 +26,12 @@ serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
 serde_json = "1.0"
 chrono = { version = "0.4.37", features = ["std", "serde"] }
-sqlx = { version = "0.8", features = [
-    "runtime-tokio",
-    "tls-rustls",
-    "mysql",
-    "sqlite",
-    "chrono",
-] }
 url = "2.4"
-axum = "0.8"
-axum-extra = { version = "0.10.1", features = ["typed-header"] }
 dotenvy = "0.15"
 sha2 = "0.10"
 regex = "1.0"
 futures = "0.3"
 tokio-stream = "0.1"
-mongodb = "3"
 feed-rs = "2"
 nipper = "0.1.9"
 reqwest-retry = "0.7"
@@ -57,4 +44,3 @@ tracing-subscriber = { version = "0.3", features = [
     "chrono",
 ] }
 logroller = "0.1"
-rand = "0.9"

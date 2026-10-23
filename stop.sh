@@ -13,7 +13,7 @@ echo -e "${BLUE}=====================================${NC}"
 
 # 1. 停止API服务
 echo -e "${YELLOW}正在停止API服务...${NC}"
-api_pid=$(ps aux | grep "./fcircle_api" | grep -v grep | awk '{print $2}')
+api_pid=$(ps aux | grep "uvicorn api.vercel:app" | grep -v grep | awk '{print $2}')
 
 if [ -z "$api_pid" ]; then
     echo -e "${BLUE}未发现正在运行的API服务${NC}"
@@ -53,8 +53,8 @@ echo -e "${BLUE}=====================================${NC}"
 echo -e "${YELLOW}是否需要删除数据文件?${NC}"
 echo -e "${YELLOW}1. 保留所有数据${NC}"
 echo -e "${YELLOW}2. 只删除日志文件 (logs/)${NC}"
-echo -e "${YELLOW}3. 只删除数据库文件 (data.db)${NC}"
-echo -e "${YELLOW}4. 删除所有数据 (logs/ 和 data.db)${NC}"
+echo -e "${YELLOW}3. 只删除数据文件 (data.json)${NC}"
+echo -e "${YELLOW}4. 删除所有数据 (logs/ 和 data.json)${NC}"
 echo -e "${BLUE}=====================================${NC}"
 read -p "请选择 [1-4] (默认: 1): " choice
 
@@ -69,12 +69,12 @@ case $choice in
         fi
         ;;
     3)
-        echo -e "${YELLOW}删除数据库文件...${NC}"
-        if [ -f "./data.db" ]; then
-            rm -f ./data.db
-            echo -e "${GREEN}数据库文件已删除${NC}"
+        echo -e "${YELLOW}删除数据文件...${NC}"
+        if [ -f "./data.json" ]; then
+            rm -f ./data.json
+            echo -e "${GREEN}data.json文件已删除${NC}"
         else
-            echo -e "${BLUE}数据库文件不存在${NC}"
+            echo -e "${BLUE}数据文件不存在${NC}"
         fi
         ;;
     4)
@@ -86,16 +86,11 @@ case $choice in
             echo -e "${BLUE}日志目录不存在${NC}"
         fi
         
-        if [ -f "./data.db" ]; then
-            rm -f ./data.db
-            echo -e "${GREEN}数据库文件已删除${NC}"
-        else
-            echo -e "${BLUE}数据库文件不存在${NC}"
-        fi
-        
         if [ -f "./data.json" ]; then
             rm -f ./data.json
             echo -e "${GREEN}data.json文件已删除${NC}"
+        else
+            echo -e "${BLUE}数据文件不存在${NC}"
         fi
         ;;
     *)

@@ -1,12 +1,13 @@
 `v6.0.6` 更新说明：
 
 ```
-- 🐛 **修复 `/all` 接口分页 bug**：修复 end=-1 时 $limit 传入负数导致 MongoDB 报错的问题
+- 🗄️ 数据存储改为 data.json：移除 SQLite / MySQL / MongoDB，API 直接读取 JSON 文件
+- ☁️ 新增 Cloudflare Worker API（cloudflare/）：Actions 每天爬取后自动部署
+- ⏰ 定时任务改为每天 02:05（Asia/Shanghai）执行一次
+- 🧹 仓库瘦身：移除 Rust API、db crate 及数据库相关代码与依赖
+- 🐛 **修复 `/all` 接口分页 bug**：修复 end=-1 时分页异常的问题
 - 🐛 **修复 `/post` 接口换域名问题**：友链博主更换域名（且老域名重定向）后，老的 link 仍能查询到对应文章
-- 🐛 **修复 MongoDB 集合名不一致**：统一 Rust core 与 Python API 的集合名为 Post/Friend（单数）
-  - ⚠️ MongoDB 用户升级后，下一次定时任务运行后会自动重新填充数据；原 `Posts`/`Friends` 集合可手动删除
 - 🐛 **修复 feed 日期解析**：当 published/updated 缺失时互相 fallback，避免文章日期显示为爬取当天
-- 🚀 **性能优化**：mongodbapi 中 last_updated_time 查询改用 find_one + sort 替代 limit(1000) + max()
 ```
 
 `v6.0.5` 更新说明：

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Hexo Circle of Friends API",
-    "description": "文章和朋友管理API，支持AI生成的文章摘要功能。\n\n支持多种数据库：SQLite、MySQL、MongoDB",
+    "description": "文章和朋友管理API，支持AI生成的文章摘要功能。\n\n数据直接读取 data.json",
     "contact": {
       "name": "Hexo Circle of Friends",
       "url": "https://github.com/Rock-Candy-Tea/hexo-circle-of-friends"
@@ -692,7 +692,7 @@
                   "message": "服务运行正常",
                   "version": "6.0.5",
                   "docs": "/docs",
-                  "database": "sqlite"
+                  "database": "json"
                 }
               }
             }
@@ -955,8 +955,8 @@
           "database": {
             "type": "string",
             "title": "Database",
-            "description": "数据库类型",
-            "example": "sqlite"
+            "description": "数据存储方式",
+            "example": "json"
           }
         },
         "type": "object",

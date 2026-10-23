@@ -25,29 +25,29 @@ pub mod query_params {
 /// 包含基本数据结构定义
 pub mod metadata {
     use serde::{Deserialize, Serialize};
-    use sqlx::FromRow;
+
+    fn default_rule() -> String {
+        "feed".to_string()
+    }
 
     /// 文章结构定义
-    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FromRow)]
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
     pub struct BasePosts {
         pub title: String,
         pub created: String,
         pub updated: String,
         pub link: String,
-        // #[serde(skip_serializing)]
-        // #[serde(default)]
+        #[serde(default = "default_rule")]
         pub rule: String,
     }
 
-    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FromRow)]
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
     pub struct Posts {
-        #[sqlx(flatten)]
         #[serde(flatten)]
         pub meta: BasePosts,
         pub author: String,
         pub avatar: String,
-        #[serde(rename = "createdAt")]
-        #[sqlx(rename = "createdAt")]
+        #[serde(rename = "createdAt", default)]
         pub created_at: String,
     }
 
@@ -177,14 +177,13 @@ pub mod metadata {
         }
     }
 
-    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FromRow)]
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
     pub struct Friends {
         pub name: String,
         pub link: String,
         pub avatar: String,
         pub error: bool,
         #[serde(rename = "createdAt")]
-        #[sqlx(rename = "createdAt")]
         pub created_at: String,
     }
 
@@ -206,17 +205,15 @@ pub mod metadata {
         }
     }
 
-    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FromRow)]
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
     pub struct ArticleSummary {
         pub link: String,
         pub content_hash: String,
         pub summary: String,
         pub ai_model: Option<String>,
-        #[serde(rename = "createdAt")]
-        #[sqlx(rename = "createdAt")]
+        #[serde(rename = "createdAt", default)]
         pub created_at: String,
-        #[serde(rename = "updatedAt")]
-        #[sqlx(rename = "updatedAt")]
+        #[serde(rename = "updatedAt", default)]
         pub updated_at: String,
     }
 
@@ -325,12 +322,8 @@ pub mod config {
         pub max_posts_num: usize,
         #[serde(rename = "OUTDATE_CLEAN")]
         pub outdate_clean: usize,
-        #[serde(rename = "DATABASE")]
-        pub database: String,
         #[serde(rename = "DEPLOY_TYPE")]
         pub deploy_type: String,
-        #[serde(rename = "SIMPLE_MODE")]
-        pub simple_mode: bool,
         #[serde(rename = "CRON")]
         pub cron: String,
         #[serde(rename = "GENERATE_SUMMARY")]
@@ -346,14 +339,14 @@ pub mod response {
     /// 统计数据
     #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
     pub struct StatisticalData {
-        friends_num: usize,
-        active_num: usize,
-        error_num: usize,
-        article_num: usize,
-        last_updated_time: String,
+        pub friends_num: usize,
+        pub active_num: usize,
+        pub error_num: usize,
+        pub article_num: usize,
+        pub last_updated_time: String,
     }
     impl StatisticalData {
-        fn new(
+        pub fn new(
             friends_num: usize,
             active_num: usize,
             error_num: usize,
@@ -607,6 +600,68 @@ pub mod response {
                 statistical_data: StatisticalDataOfSomeFriend::new(name, link, avatar, article_num),
                 article_data,
             }
+        }
+    }
+}
+
+/// 数据文件（data.json）结构
+pub mod storage {
+    use super::metadata::{ArticleSummary, Friends, Posts};
+    use super::response::StatisticalData;
+    use serde::{Deserialize, Serialize};
+    use std::fs::File;
+
+    /// 单个 JSON 文件即完整数据源，供各 API 直接读取
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+    pub struct DataFile {
+        pub statistical_data: StatisticalData,
+        #[serde(default)]
+        pub friends: Vec<Friends>,
+        #[serde(default)]
+        pub article_data: Vec<Posts>,
+        #[serde(default)]
+        pub summaries: Vec<ArticleSummary>,
+    }
+
+    impl DataFile {
+        pub fn new(
+            friends: Vec<Friends>,
+            article_data: Vec<Posts>,
+            summaries: Vec<ArticleSummary>,
+        ) -> Self {
+            let friends_num = friends.len();
+            let error_num = friends.iter().filter(|f| f.error).count();
+            let last_updated_time = article_data
+                .iter()
+                .map(|p| p.created_at.as_str())
+                .max()
+                .unwrap_or("1970-01-01 00:00:00")
+                .to_string();
+
+            DataFile {
+                statistical_data: StatisticalData::new(
+                    friends_num,
+                    friends_num - error_num,
+                    error_num,
+                    article_data.len(),
+                    last_updated_time,
+                ),
+                friends,
+                article_data,
+                summaries,
+            }
+        }
+
+        /// 读取已有 data.json，不存在或格式错误时返回 None
+        pub fn load(path: &str) -> Option<Self> {
+            let file = File::open(path).ok()?;
+            serde_json::from_reader(file).ok()
+        }
+
+        pub fn save(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+            let file = File::create(path)?;
+            serde_json::to_writer_pretty(file, self)?;
+            Ok(())
         }
     }
 }

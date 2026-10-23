@@ -6,36 +6,19 @@ import uvicorn
 # 将项目根目录添加到Python的搜索路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from tools.utils import get_user_settings
 from tools.utils import get_version
+from api.jsonapi import (
+    query_all,
+    query_friend,
+    query_random_friend,
+    query_random_post,
+    query_post,
+    query_summary,
+)
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional, Union
-
-settings = get_user_settings()
-if settings["DATABASE"] == "mysql" or settings["DATABASE"] == "sqlite":
-    from api_dependence.sql.sqlapi import (
-        query_all,
-        query_friend,
-        query_random_friend,
-        query_random_post,
-        query_post,
-        query_summary,
-    )
-elif settings["DATABASE"] == "mongodb":
-    from api_dependence.mongodb.mongodbapi import (
-        query_all,
-        query_friend,
-        query_random_friend,
-        query_random_post,
-        query_post,
-        query_summary,
-    )
-else:
-    raise Exception("DATABASE not supported")
-
-OUTDATE_CLEAN = settings["OUTDATE_CLEAN"]
 
 
 # Response Models
@@ -204,12 +187,12 @@ class IndexResponse(BaseModel):
     message: str = Field(..., description="服务状态消息", example="服务运行正常")
     version: str = Field(..., description="当前版本号", example="6.0.5")
     docs: str = Field(..., description="API 文档链接", example="/docs")
-    database: str = Field(..., description="数据库类型", example="sqlite")
+    database: str = Field(..., description="数据存储方式", example="json")
 
 
 app = FastAPI(
     title="Hexo Circle of Friends API",
-    description="文章和朋友管理API，支持AI生成的文章摘要功能。\n\n支持多种数据库：SQLite、MySQL、MongoDB",
+    description="文章和朋友管理API，支持AI生成的文章摘要功能。\n\n数据直接读取 data.json。",
     version="6.0.6",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -711,7 +694,7 @@ def summary(link: str = Query(..., description="文章链接地址（必填）")
                         "message": "服务运行正常",
                         "version": "6.0.5",
                         "docs": "/docs",
-                        "database": "sqlite",
+                        "database": "json",
                     }
                 }
             },
@@ -728,13 +711,13 @@ def index():
     - **message**: 服务状态消息
     - **version**: 当前版本号
     - **docs**: API文档链接
-    - **database**: 使用的数据库类型
+    - **database**: 数据存储方式
     """
     return {
         "message": "服务运行正常",
         "version": get_version()["version"],
         "docs": "/docs",
-        "database": settings["DATABASE"],
+        "database": "json",
     }
 
 
@@ -761,12 +744,5 @@ def get_version_info():
 
 
 if __name__ == "__main__":
-    if settings["DEPLOY_TYPE"] == "docker":
-        uvicorn.run("vercel:app", host="0.0.0.0")
-    elif settings["DEPLOY_TYPE"] == "server":
-        EXPOSE_PORT = (
-            int(os.environ["EXPOSE_PORT"]) if os.environ.get("EXPOSE_PORT") else 8000
-        )
-        uvicorn.run("vercel:app", host="0.0.0.0", port=EXPOSE_PORT)
-    else:
-        uvicorn.run("vercel:app", host="0.0.0.0", reload=True)
+    EXPOSE_PORT = int(os.environ["EXPOSE_PORT"]) if os.environ.get("EXPOSE_PORT") else 8000
+    uvicorn.run("vercel:app", host="0.0.0.0", port=EXPOSE_PORT)

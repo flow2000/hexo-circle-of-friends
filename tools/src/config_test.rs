@@ -52,9 +52,7 @@ BLOCK_SITE: []
 BLOCK_SITE_REVERSE: false
 MAX_POSTS_NUM: 100
 OUTDATE_CLEAN: 30
-DATABASE: "sqlite"
 DEPLOY_TYPE: "github"
-SIMPLE_MODE: false
 CRON: "0 0 */6 * *"
 GENERATE_SUMMARY: {
   enabled: true,
